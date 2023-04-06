@@ -1,5 +1,16 @@
 const properties = require("./json/properties.json");
 const users = require("./json/users.json");
+const { Pool } = require('pg');
+
+const config = {
+  user: 'vagrant',
+  password: 'vagrant',
+  host: 'localhost',
+  database: 'lightbnb'
+}
+
+const pool = new Pool(config)
+
 
 /// Users
 
@@ -59,12 +70,13 @@ const getAllReservations = function (guest_id, limit = 10) {
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-const getAllProperties = function (options, limit = 10) {
-  const limitedProperties = {};
-  for (let i = 1; i <= limit; i++) {
-    limitedProperties[i] = properties[i];
-  }
-  return Promise.resolve(limitedProperties);
+const getAllProperties = (options, limit = 10) => {
+  return pool
+    .query(`SELECT * FROM properties LIMIT $1`, [limit])
+    .then((result) => result.rows)
+    .catch((err) => {
+      console.log(err.message);
+    });
 };
 
 /**
