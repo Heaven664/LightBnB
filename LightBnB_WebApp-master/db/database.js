@@ -7,9 +7,9 @@ const config = {
   password: 'vagrant',
   host: 'localhost',
   database: 'lightbnb'
-}
+};
 
-const pool = new Pool(config)
+const pool = new Pool(config);
 
 
 /// Users
@@ -20,14 +20,16 @@ const pool = new Pool(config)
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function (email) {
-  let resolvedUser = null;
-  for (const userId in users) {
-    const user = users[userId];
-    if (user?.email.toLowerCase() === email?.toLowerCase()) {
-      resolvedUser = user;
-    }
-  }
-  return Promise.resolve(resolvedUser);
+  const query = `
+  SELECT *
+  FROM users
+  WHERE LOWER(email) = $1
+  `;
+
+  const values = [email.toLowerCase()];
+
+  return pool.query(query, values)
+    .then(result => result.rows[0] || null);
 };
 
 /**
@@ -36,7 +38,16 @@ const getUserWithEmail = function (email) {
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithId = function (id) {
-  return Promise.resolve(users[id]);
+  const query = `
+  SELECT *
+  FROM users
+  WHERE id = $1
+  `;
+
+  const values = [id];
+
+  return pool.query(query, values)
+    .then(result => result.rows[0] || null);
 };
 
 /**
@@ -45,10 +56,21 @@ const getUserWithId = function (id) {
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser = function (user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const name = user.name;
+  const email = user.email;
+  const password = user.password;
+
+  const queryName = `
+  INSERT INTO users (name, email, password)
+  VALUES ($1, $2, $3)
+  RETURNING *;
+  `;
+
+  const values = [name, email, password];
+
+  return pool.query(queryName, values)
+    .then(result => result.rows[0]);
+
 };
 
 /// Reservations
@@ -59,7 +81,32 @@ const addUser = function (user) {
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function (guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  // return getAllProperties(null, 2);
+
+  const queryName = `
+  SELECT reservations.id, 
+        properties.title, 
+        properties.thumbnail_photo_url, 
+        properties.cost_per_night, 
+        properties.number_of_bathrooms,
+        properties.number_of_bedrooms,
+        properties.parking_spaces,
+        reservations.start_date, 
+        reservations.end_date, 
+        avg(rating) as average_rating
+  FROM reservations
+  JOIN properties ON property_id = properties.id
+  JOIN property_reviews ON property_reviews.property_id = properties.id
+  WHERE property_reviews.guest_id = $1
+  GROUP BY reservations.id, properties.id
+  ORDER BY start_date
+  LIMIT $2;`;
+
+  const values = [guest_id, limit];
+
+  pool.query(queryName, values)
+    .then(result => console.log(result.rows));
+
 };
 
 /// Properties
