@@ -128,7 +128,7 @@ const getAllProperties = (options, limit = 10) => {
     queryParams.push(options.owner_id);
     queryString += ` WHERE owner_id = $${queryParams.length} GROUP BY  properties.id`;
     return pool.query(queryString, queryParams)
-            .then(result => result.rows)
+      .then(result => result.rows);
   }
 
   if (options.city) {
@@ -168,10 +168,23 @@ const getAllProperties = (options, limit = 10) => {
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function (property) {
-  const propertyId = Object.keys(properties).length + 1;
-  property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
+  const queryParamsKeys = Object.keys(property);
+  const queryParamsValues = Object.values(property);
+  let insertValues = '';
+  for (let element in queryParamsValues) {
+    if (Number(element) === queryParamsValues.length - 1) {
+      insertValues += `$${Number(element) + 1}`
+    } else {
+      insertValues += `$${Number(element) + 1}, `
+    }
+  }
+  console.log(insertValues);
+  const queryString = `INSERT INTO properties (${queryParamsKeys.join(', ')}) VALUES (${insertValues}) RETURNING *;`;
+  console.log(queryString);
+
+  return pool.query(queryString, queryParamsValues)
+    .then(res => res.rows[0]);
+
 };
 
 module.exports = {
