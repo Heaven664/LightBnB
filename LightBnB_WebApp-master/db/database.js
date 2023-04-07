@@ -125,10 +125,10 @@ const getAllProperties = (options, limit = 10) => {
   `;
 
   if (options.owner_id) {
-    queryParams.push(owner_id);
-    queryString += ` WHERE owner_id = $${queryParams.length} `;
+    queryParams.push(options.owner_id);
+    queryString += ` WHERE owner_id = $${queryParams.length} GROUP BY  properties.id`;
     return pool.query(queryString, queryParams)
-      .then(result = result.rows);
+            .then(result => result.rows)
   }
 
   if (options.city) {
